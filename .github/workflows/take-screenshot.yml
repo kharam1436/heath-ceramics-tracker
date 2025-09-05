@@ -20,7 +20,7 @@ jobs:
           node -e "
           const puppeteer = require('puppeteer');
           (async () => {
-            const browser = await puppeteer.launch();
+            const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
             const page = await browser.newPage();
             await page.goto('https://www.heathceramics.com/collections/heath-herman-miller/products/studio-mug-lemon-rind?variant=41422328954967');
             await page.screenshot({ path: 'screenshot.png' });

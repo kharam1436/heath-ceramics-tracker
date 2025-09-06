@@ -1,0 +1,48 @@
+name: Check KakaoTalk Notification Token validation daily
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * *'  # Run every day at 9 AM
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+      - name: Install dependencies
+        run: npm install puppeteer
+      - name: Take screenshot
+        id: take-screenshot
+        run: |
+          node -e "
+          const puppeteer = require('puppeteer');
+          (async () => {
+            const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1080, height: 1000 });
+            await page.goto('https://www.heathceramics.com/collections/heath-herman-miller/products/studio-mug-lemon-rind?variant=41422328954967');
+            const text = await page.\$eval('#AddToCartForm > div.hero--pdp__add-to-cart > div.button-holder > button > span.btn__text > span > span.text', el => el.textContent.trim());
+            console.log('Button text:', text);
+            if (text !== 'Temporarily Out Of Stock') {
+              console.log('Product is available!');
+              require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'available=true\n');
+            } else {
+              require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'available=false\n');
+            }
+            await page.screenshot({ path: 'screenshot.png' });
+            await browser.close();
+          })();
+          "
+      
+      - name: Send KakaoTalk notification
+        uses: Alfex4936/kakaotalk-ci-action@main
+        with:
+          kakao_access_token: ${{ secrets.KAKAO_ACCESS_TOKEN }}
+          function_name: send_to_me_custom
+          template_id: "124078"

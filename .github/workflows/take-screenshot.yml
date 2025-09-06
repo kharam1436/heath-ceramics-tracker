@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'  # Runs at minute 0 of every hour
 
 jobs:
   screenshot:
@@ -23,12 +25,15 @@ jobs:
           (async () => {
             const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
             const page = await browser.newPage();
+            await page.setViewport({ width: 1080, height: 1000 });
             await page.goto('https://www.heathceramics.com/collections/heath-herman-miller/products/studio-mug-lemon-rind?variant=41422328954967');
             const text = await page.\$eval('#AddToCartForm > div.hero--pdp__add-to-cart > div.button-holder > button > span.btn__text > span > span.text', el => el.textContent.trim());
             console.log('Button text:', text);
             if (text !== 'Temporarily Out Of Stock') {
               console.log('Product is available!');
               require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'available=true\n');
+            } else {
+              require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'available=false\n');
             }
             await page.screenshot({ path: 'screenshot.png' });
             await browser.close();
@@ -39,15 +44,16 @@ jobs:
         with:
           name: screenshot
           path: screenshot.png
-      - name: Send email
+      - name: Send email if product is available
         if: steps.take-screenshot.outputs.available == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.mail.me.com
-          server_port: 587
-          username: ${{ secrets.ICLOUD_USERNAME }}
-          password: ${{ secrets.ICLOUD_APP_PASSWORD }}
-          subject: Product Available
-          body: The product is now available!
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Product Available: Heath Ceramics Studio Mug"
           to: kharam1436@icloud.com
-          from: ${{ secrets.ICLOUD_USERNAME }}
+          from: ${{ secrets.GMAIL_USERNAME }}
+          body: "The product is available! See attached screenshot."
+          attachments: screenshot.png

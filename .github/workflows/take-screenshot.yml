@@ -57,3 +57,11 @@ jobs:
           from: ${{ secrets.GMAIL_USERNAME }}
           body: "The product is available! See attached screenshot."
           attachments: screenshot.png
+      
+      - name: Send KakaoTalk notification
+        uses: Alfex4936/kakaotalk-ci-action@main
+        if: steps.take-screenshot.outputs.available == 'true'
+        with:
+          kakao_access_token: ${{ secrets.KAKAO_ACCESS_TOKEN }}
+          function_name: send_to_me_custom
+          template_id: "124076"
